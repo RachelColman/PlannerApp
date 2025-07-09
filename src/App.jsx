@@ -1,71 +1,100 @@
-import React, { useState } from "react";
-import "./App.css"; // we'll add styles here later
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import logo from "./assets/logo.png"; // Make sure logo.png exists in src/assets/
 
-const initialTasks = {
-  daily: [],
-  weekly: [],
-};
+const tabs = ["Today", "This week", "Next week", "Week after", "Appointments"];
 
 export default function App() {
-  const [tasks, setTasks] = useState(initialTasks);
+  // ✅ Load tasks from localStorage or default
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem("planner-tasks");
+    return saved ? JSON.parse(saved) : {
+      Today: [],
+      "This week": [],
+      "Next week": [],
+      "Week after": [],
+      Appointments: [],
+    };
+  });
+
+  const [selectedTab, setSelectedTab] = useState("Today");
   const [input, setInput] = useState("");
-  const [type, setType] = useState("daily");
+
+  // ✅ Save tasks to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("planner-tasks", JSON.stringify(tasks));
+  }, [tasks]);
 
   const addTask = () => {
     if (!input.trim()) return;
     setTasks({
       ...tasks,
-      [type]: [...tasks[type], { text: input, done: false }],
+      [selectedTab]: [...tasks[selectedTab], { text: input, done: false }],
     });
     setInput("");
   };
 
-  const toggleTask = (taskIndex, taskType) => {
-    const updated = tasks[taskType].map((task, idx) =>
-      idx === taskIndex ? { ...task, done: !task.done } : task
+  const toggleTask = (index) => {
+    const updated = tasks[selectedTab].map((task, i) =>
+      i === index ? { ...task, done: !task.done } : task
     );
-    setTasks({ ...tasks, [taskType]: updated });
+    setTasks({ ...tasks, [selectedTab]: updated });
   };
 
+  const deleteTask = (index) => {
+    const updated = tasks[selectedTab].filter((_, i) => i !== index);
+    setTasks({ ...tasks, [selectedTab]: updated });
+  }
+
   return (
-    <div className="app-container">
-      <h1>Planner App</h1>
-
-      <div className="input-group">
-        <select value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-        </select>
-        <input
-          type="text"
-          value={input}
-          placeholder="Enter task"
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button onClick={addTask}>Add</button>
-      </div>
-
-      {["daily", "weekly"].map((taskType) => (
-        <div key={taskType} className="task-section">
-          <h2>{taskType.charAt(0).toUpperCase() + taskType.slice(1)} Tasks</h2>
-          <ul>
-            {tasks[taskType].map((task, index) => (
-              <li key={index} className="task-item">
-                <span className="task-number">{index + 1}.</span>
-                <input
-                  type="checkbox"
-                  checked={task.done}
-                  onChange={() => toggleTask(index, taskType)}
-                />
-                <span className={task.done ? "done task-text" : "task-text"}>
-                  {task.text}
-                </span>
-              </li>
-            ))}
-          </ul>
+    <div className="app">
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <img src={logo} alt="Logo" className="logo" />
+          <h2 className="app-name">Personal Planner</h2>
         </div>
-      ))}
+        {tabs.map((tab) => (
+          <div
+            key={tab}
+            className={`tab ${selectedTab === tab ? "active" : ""}`}
+            onClick={() => setSelectedTab(tab)}
+          >
+            {tab}
+          </div>
+        ))}
+      </aside>
+
+      <main className="main">
+        <h2>{selectedTab}</h2>
+
+        <div className="input-group">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={`Add task for ${selectedTab.toLowerCase()}`}
+          />
+          <button onClick={addTask}>Add</button>
+        </div>
+
+        <ul className="task-list">
+          {tasks[selectedTab].map((task, index) => (
+            <li key={index} className="task-item">
+              <input
+                type="checkbox"
+                checked={task.done}
+                onChange={() => toggleTask(index)}
+              />
+              <span className={`task-text ${task.done ? "done" : ""}`}>
+                {index + 1}. {task.text}
+              </span>
+              <button className="delete-btn" onClick={() => deleteTask(index)}>
+              🗑
+              </button>
+            </li>
+          ))}
+        </ul>
+      </main>
     </div>
   );
 }
-
