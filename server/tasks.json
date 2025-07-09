@@ -1,7 +1,25 @@
 {
-  "Today": [],
-  "This week": [],
+  "Today": [
+    {
+      "id": "b5d77719-f8ef-42c2-9cfe-7bd68d2fd911",
+      "text": "Walk dog",
+      "done": true
+    }
+  ],
+  "This week": [
+    {
+      "id": "96d0f18f-c338-414c-b597-f5480e0023c5",
+      "text": "Collect John",
+      "done": false
+    }
+  ],
   "Next week": [],
   "This month": [],
-  "Appointments": []
+  "Appointments": [
+    {
+      "id": "70d8c434-6890-4743-8279-c0288c477ebf",
+      "text": "Dentist 10am",
+      "done": false
+    }
+  ]
 }

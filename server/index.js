@@ -42,6 +42,10 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.send("PlannerApp API is running");
 });
+app.get("/tasks", (req, res) => {
+    res.json(tasks);
+  });
+  
 
 app.post("/tasks", (req, res) => {
   const { tab, text } = req.body;

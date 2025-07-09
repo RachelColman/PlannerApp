@@ -1,59 +1,93 @@
 import React, { useState, useEffect } from "react";
-import "./App.css";
-import logo from "./assets/logo.png"; // Make sure logo.png exists in src/assets/
+import "./App.css"; 
+import logo from "./assets/logo.png";
 
-const tabs = ["Today", "This week", "Next week", "Week after", "Appointments"];
-
-export default function App() {
-  // ✅ Load tasks from localStorage or default
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem("planner-tasks");
-    return saved ? JSON.parse(saved) : {
-      Today: [],
-      "This week": [],
-      "Next week": [],
-      "Week after": [],
-      Appointments: [],
-    };
-  });
-
+function App() {
+  const [tasks, setTasks] = useState({});
+  const [newTaskText, setNewTaskText] = useState("");
   const [selectedTab, setSelectedTab] = useState("Today");
-  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // ✅ Save tasks to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem("planner-tasks", JSON.stringify(tasks));
-  }, [tasks]);
+    setLoading(true);
+    fetch("http://localhost:4000/tasks")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch tasks");
+        return res.json();
+      })
+      .then((data) => {
+        setTasks(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   const addTask = () => {
-    if (!input.trim()) return;
-    setTasks({
-      ...tasks,
-      [selectedTab]: [...tasks[selectedTab], { text: input, done: false }],
-    });
-    setInput("");
+    if (!newTaskText.trim()) return;
+
+    fetch("http://localhost:4000/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tab: selectedTab, text: newTaskText }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to add task");
+        return res.json();
+      })
+      .then((newTask) => {
+        setTasks((prev) => ({
+          ...prev,
+          [selectedTab]: [...(prev[selectedTab] || []), newTask],
+        }));
+        setNewTaskText("");
+      })
+      .catch((err) => setError(err.message));
   };
 
-  const toggleTask = (index) => {
-    const updated = tasks[selectedTab].map((task, i) =>
-      i === index ? { ...task, done: !task.done } : task
-    );
-    setTasks({ ...tasks, [selectedTab]: updated });
+  const toggleTask = (tab, id) => {
+    fetch(`http://localhost:4000/tasks/${tab}/${id}`, { method: "PATCH" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to update task");
+        return res.json();
+      })
+      .then((updatedTask) => {
+        setTasks((prev) => ({
+          ...prev,
+          [tab]: prev[tab].map((t) => (t.id === id ? updatedTask : t)),
+        }));
+      })
+      .catch((err) => setError(err.message));
   };
 
-  const deleteTask = (index) => {
-    const updated = tasks[selectedTab].filter((_, i) => i !== index);
-    setTasks({ ...tasks, [selectedTab]: updated });
-  }
+  const deleteTask = (tab, id) => {
+    fetch(`http://localhost:4000/tasks/${tab}/${id}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to delete task");
+        setTasks((prev) => ({
+          ...prev,
+          [tab]: prev[tab].filter((t) => t.id !== id),
+        }));
+      })
+      .catch((err) => setError(err.message));
+  };
+
+  if (loading) return <div>Loading tasks...</div>;
+  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-header">
+          {/* Replace with your actual logo or remove img if none */}
           <img src={logo} alt="Logo" className="logo" />
-          <h2 className="app-name">Personal Planner</h2>
+          <div className="app-name">Personal Planner</div>
         </div>
-        {tabs.map((tab) => (
+
+        {Object.keys(tasks).map((tab) => (
           <div
             key={tab}
             className={`tab ${selectedTab === tab ? "active" : ""}`}
@@ -65,31 +99,33 @@ export default function App() {
       </aside>
 
       <main className="main">
-        <h2>{selectedTab}</h2>
-
         <div className="input-group">
           <input
             type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={`Add task for ${selectedTab.toLowerCase()}`}
+            value={newTaskText}
+            onChange={(e) => setNewTaskText(e.target.value)}
+            placeholder={`Add task for ${selectedTab}`}
           />
-          <button onClick={addTask}>Add</button>
+          <button onClick={addTask}>Add Task</button>
         </div>
 
         <ul className="task-list">
-          {tasks[selectedTab].map((task, index) => (
-            <li key={index} className="task-item">
+          {(tasks[selectedTab] || []).map((task) => (
+            <li key={task.id} className="task-item">
               <input
                 type="checkbox"
                 checked={task.done}
-                onChange={() => toggleTask(index)}
+                onChange={() => toggleTask(selectedTab, task.id)}
               />
               <span className={`task-text ${task.done ? "done" : ""}`}>
-                {index + 1}. {task.text}
+                {task.text}
               </span>
-              <button className="delete-btn" onClick={() => deleteTask(index)}>
-              🗑
+              <button
+                className="delete-btn"
+                onClick={() => deleteTask(selectedTab, task.id)}
+                title="Delete Task"
+              >
+                &times;
               </button>
             </li>
           ))}
@@ -98,3 +134,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
