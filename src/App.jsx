@@ -82,7 +82,6 @@ function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-header">
-          {/* Replace with your actual logo or remove img if none */}
           <img src={logo} alt="Logo" className="logo" />
           <div className="app-name">Personal Planner</div>
         </div>
